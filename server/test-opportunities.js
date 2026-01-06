@@ -18,7 +18,8 @@ async function testOpportunities() {
       mode: 'online',
       deadline: '2026-12-31',
       teamSize: 4,
-      skills: ['JavaScript', 'Node.js', 'React']
+      skills: ['JavaScript', 'Node.js', 'React'],
+      description: 'A national level hackathon for students'
     }, {
       headers: { Authorization: `Bearer ${token}` }
     });

@@ -13,6 +13,8 @@ const { z } = require('zod');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const sanitizeHtml = require('sanitize-html');
+// Use mock service for testing (replace with real service when valid API key is available)
+const { enhanceItemDescription, categorizeAndTagDoubt, summarizeOpportunity } = require('./services/geminiService.mock');
 
 // Initialize Express app
 const app = express();
@@ -223,19 +225,25 @@ app.post('/api/items', requireAuth, async (req, res) => {
     
     // Find the user ID from the database based on email
     const userResult = await pool.query('SELECT id FROM users WHERE email = $1', [userEmail]);
-     
+      
     console.log('User query result:', userResult.rows);
-     
+      
     if (userResult.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
-     
+      
     const userId = userResult.rows[0].id;
     
-    // Insert item into database with status = 'pending'
+    // Use Gemini to enhance the item description
+    const enhancedDescription = await enhanceItemDescription(description, title, category);
+    
+    console.log('Original description:', description);
+    console.log('Enhanced description:', enhancedDescription);
+    
+    // Insert item into database with status = 'pending' and enhanced description
     const result = await pool.query(
       'INSERT INTO items (title, description, category, condition, price, image_path, status, user_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
-      [title, description, category, condition, price, image_path, 'pending', userId]
+      [title, enhancedDescription, category, condition, price, image_path, 'pending', userId]
     );
     
     res.status(201).json(result.rows[0]);
@@ -569,10 +577,15 @@ app.post('/api/doubts', requireAuth, async (req, res) => {
     
     const userId = userResult.rows[0].id;
     
-    // Insert doubt into database with status = 'pending'
+    // Use Gemini to categorize and tag the doubt
+    const { category, tags } = await categorizeAndTagDoubt(title, content);
+    
+    console.log('AI Categorization - Category:', category, 'Tags:', tags);
+    
+    // Insert doubt into database with status = 'pending' and AI-generated category/tags
     const result = await pool.query(
-      'INSERT INTO doubts (title, content, topic, is_anonymous, status, user_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-      [title, content, topic, isAnonymous || false, 'pending', userId]
+      'INSERT INTO doubts (title, content, topic, is_anonymous, status, user_id, ai_category, ai_tags) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+      [title, content, topic, isAnonymous || false, 'pending', userId, category, tags]
     );
     
     res.status(201).json(result.rows[0]);
@@ -663,35 +676,46 @@ app.get('/api/doubts/:id', async (req, res) => {
 // POST /opportunities - post an opportunity (senior/admin only)
 app.post('/api/opportunities', requireAuth, async (req, res) => {
   try {
-    const { title, type, mode, deadline, teamSize, skills } = req.body;
+    const { title, type, mode, deadline, teamSize, skills, description, prize, location, image_path } = req.body;
     const userEmail = req.user.email;
-    
+
     // Find the user ID and role from the database based on email
     const userResult = await pool.query('SELECT id, role FROM users WHERE email = $1', [userEmail]);
-    
+
     if (userResult.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
-    
+
     const userRole = userResult.rows[0].role;
-    
+
     // Check if user is senior or admin
     if (userRole !== 'senior' && userRole !== 'admin') {
       return res.status(403).json({ error: 'Only seniors and admins can post opportunities' });
     }
-    
+
     const userId = userResult.rows[0].id;
-    
-    // Insert opportunity into database with status = 'pending'
+
+    // Use Gemini to summarize the opportunity - only send required fields
+    const opportunityData = { title, deadline, skills, teamSize: teamSize || 1, mode };
+    const aiSummary = await summarizeOpportunity(opportunityData);
+
+    console.log('AI Summary:', aiSummary);
+
+    // Insert opportunity into database with status = 'pending' and AI-generated summary
     const result = await pool.query(
-      'INSERT INTO opportunities (title, type, mode, deadline, team_size, skills, status, posted_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
-      [title, type, mode, deadline, teamSize, skills, 'pending', userId]
+      'INSERT INTO opportunities (title, type, mode, deadline, team_size, skills, description, prize, location, image_path, status, posted_by, ai_summary) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *',
+      [title, type, mode, deadline, teamSize, skills, description, prize, location, image_path, 'pending', userId, aiSummary]
     );
-    
+
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('Error creating opportunity:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error stack:', error.stack);
+    console.error('Error message:', error.message);
+    if (error.response) {
+      console.error('Error response:', error.response);
+    }
+    res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
 
@@ -718,6 +742,24 @@ app.get('/api/opportunities', async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching opportunities:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /opportunities/:id - get single opportunity
+app.get('/api/opportunities/:id', async (req, res) => {
+  try {
+    const opportunityId = req.params.id;
+    
+    const result = await pool.query('SELECT * FROM opportunities WHERE id = $1', [opportunityId]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Opportunity not found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching opportunity:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

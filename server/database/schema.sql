@@ -34,6 +34,8 @@ CREATE TABLE IF NOT EXISTS doubts (
   is_anonymous BOOLEAN DEFAULT FALSE,
   status VARCHAR(20) CHECK (status IN ('pending', 'approved', 'rejected')) DEFAULT 'pending',
   admin_remark TEXT,
+  ai_category VARCHAR(100),
+  ai_tags TEXT[],
   user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -56,8 +58,13 @@ CREATE TABLE IF NOT EXISTS opportunities (
   deadline TIMESTAMP,
   team_size INTEGER,
   skills TEXT[],
+  description TEXT,
+  prize VARCHAR(255),
+  location VARCHAR(255),
+  image_path VARCHAR(255),
   status VARCHAR(20) CHECK (status IN ('pending', 'approved', 'rejected')) DEFAULT 'pending',
   admin_remark TEXT,
+  ai_summary TEXT,
   posted_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

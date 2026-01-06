@@ -62,6 +62,66 @@ async function addMissingColumns() {
       console.log('✅ Added admin_remark column to opportunities table');
     }
 
+    // Check if description column exists in opportunities table
+    const opportunitiesDescriptionCheck = await pool.query(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_name = 'opportunities' AND column_name = 'description'`
+    );
+
+    if (opportunitiesDescriptionCheck.rows.length === 0) {
+      console.log('📝 Adding description column to opportunities table...');
+      await pool.query('ALTER TABLE opportunities ADD COLUMN description TEXT');
+      console.log('✅ Added description column to opportunities table');
+    }
+
+    // Check if prize column exists in opportunities table
+    const opportunitiesPrizeCheck = await pool.query(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_name = 'opportunities' AND column_name = 'prize'`
+    );
+
+    if (opportunitiesPrizeCheck.rows.length === 0) {
+      console.log('📝 Adding prize column to opportunities table...');
+      await pool.query('ALTER TABLE opportunities ADD COLUMN prize VARCHAR(255)');
+      console.log('✅ Added prize column to opportunities table');
+    }
+
+    // Check if location column exists in opportunities table
+    const opportunitiesLocationCheck = await pool.query(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_name = 'opportunities' AND column_name = 'location'`
+    );
+
+    if (opportunitiesLocationCheck.rows.length === 0) {
+      console.log('📝 Adding location column to opportunities table...');
+      await pool.query('ALTER TABLE opportunities ADD COLUMN location VARCHAR(255)');
+      console.log('✅ Added location column to opportunities table');
+    }
+
+    // Check if image_path column exists in opportunities table
+    const opportunitiesImagePathCheck = await pool.query(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_name = 'opportunities' AND column_name = 'image_path'`
+    );
+
+    if (opportunitiesImagePathCheck.rows.length === 0) {
+      console.log('📝 Adding image_path column to opportunities table...');
+      await pool.query('ALTER TABLE opportunities ADD COLUMN image_path VARCHAR(255)');
+      console.log('✅ Added image_path column to opportunities table');
+    }
+
+    // Check if ai_summary column exists in opportunities table
+    const opportunitiesAiSummaryCheck = await pool.query(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_name = 'opportunities' AND column_name = 'ai_summary'`
+    );
+
+    if (opportunitiesAiSummaryCheck.rows.length === 0) {
+      console.log('📝 Adding ai_summary column to opportunities table...');
+      await pool.query('ALTER TABLE opportunities ADD COLUMN ai_summary TEXT');
+      console.log('✅ Added ai_summary column to opportunities table');
+    }
+
     // Update existing records to have pending status
     console.log('📝 Updating existing records to pending status...');
     await pool.query("UPDATE doubts SET status = 'pending' WHERE status IS NULL");
