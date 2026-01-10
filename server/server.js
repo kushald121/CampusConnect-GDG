@@ -138,6 +138,9 @@ for (let i = 1; i < lines.length; i++) {
 // Add admin user to allowed list
 allowedUsers.push({ email: 'admin_comp_2024@ltce.in', password: 'Password@123' });
 
+// Add demo user to allowed list
+allowedUsers.push({ email: 'demo_student@ltce.in', password: 'DemoPassword@123' });
+
 // Login endpoint
 app.post('/api/login', async (req, res) => {
   console.log('Request body:', req.body);
